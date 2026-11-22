@@ -106,11 +106,20 @@ The new UI uses `/api/v2/*` (JSON). It is documented by
 
 ## Status
 
-The protocol, core logic, storage, HTTP API (including a raw-socket
-HeaterMeterClient compatibility test) and the UI are tested against the
-simulator (`cargo test --workspace`). The hardware paths have **not yet
-been verified on a real Raspberry Pi with a HeaterMeter board**:
+Verified so far:
+
+* `cargo test --workspace` (53 tests) passes on macOS and on aarch64 Linux
+  (Debian Bookworm). The tests cover the protocol, the core logic, storage and
+  the HTTP API, including a raw-socket HeaterMeterClient compatibility test,
+  all run against the simulator.
+* The arm64 `.deb` installs on a clean Debian Bookworm, and the daemon runs in
+  simulator mode and serves the UI. Its dependencies are glibc only.
+* The web UI was checked at desktop and phone (390 px) widths, in light and
+  dark themes.
+
+Not yet verified on a real Raspberry Pi with a HeaterMeter board:
 
 * the serial port on `/dev/serial0`
 * avrdude `linuxspi` flashing
 * NetworkManager wifi control
+* the armv7/armv6 builds (CI builds them with cargo-zigbuild)

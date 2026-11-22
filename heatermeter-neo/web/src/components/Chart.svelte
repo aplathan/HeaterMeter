@@ -188,7 +188,9 @@
 <style>
   .chart {
     width: 100%;
+    min-width: 0;
     min-height: 200px;
+    overflow: hidden;
   }
   .empty {
     text-align: center;

@@ -188,6 +188,9 @@
     background: var(--ok);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent);
   }
+  main > :global(*) {
+    min-width: 0;
+  }
   main {
     max-width: 1280px;
     margin: 0 auto;
@@ -218,9 +221,18 @@
     .bar {
       gap: 8px;
     }
+    nav {
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
     nav a {
       padding: 6px 8px;
       font-size: 0.9rem;
+      white-space: nowrap;
+    }
+    .tools button.ghost.small {
+      padding: 4px 6px;
     }
   }
 </style>

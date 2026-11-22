@@ -100,6 +100,11 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    min-width: 0;
+  }
+  .layout > :global(*),
+  .top > :global(*) {
+    min-width: 0;
   }
   .top {
     display: grid;
@@ -108,7 +113,7 @@
   }
   .probes {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 16px;
   }
   .seg {
