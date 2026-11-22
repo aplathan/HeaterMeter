@@ -6,7 +6,6 @@ members = ["crates/hm-protocol", "crates/lm-core", "crates/hm-sim", "crates/link
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-repository = "https://github.com/CapnBry/HeaterMeter"
 
 [workspace.dependencies]
 hm-protocol = { path = "crates/hm-protocol" }

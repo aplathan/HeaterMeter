@@ -121,8 +121,8 @@ impl StatusState {
         let g = |i: usize| f.get(i).map(|v| lit(v)).unwrap_or_else(|| "null".into());
         self.time = time;
         self.set = g(0);
-        for i in 0..NUM_PROBES {
-            self.probes[i].temp = g(1 + i);
+        for (i, p) in self.probes.iter_mut().enumerate() {
+            p.temp = g(1 + i);
         }
         self.fan_c = g(5);
         self.fan_a = g(6);
