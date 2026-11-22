@@ -1,0 +1,11 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!-- Same mDNS advertisement as the OpenWrt LinkMeter (procd_add_mdns) -->
+<service-group>
+  <name replace-wildcards="yes">HeaterMeter on %h</name>
+  <service>
+    <type>_http._tcp</type>
+    <port>80</port>
+    <txt-record>path=/luci/lm/</txt-record>
+  </service>
+</service-group>

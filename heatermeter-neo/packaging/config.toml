@@ -1,0 +1,26 @@
+# linkmeterd configuration (Raspberry Pi defaults).
+# Most settings are edited from the web UI; this file is rewritten by the
+# daemon when settings change.
+
+[daemon]
+serial_device = "auto"      # /dev/serial0, /dev/ttyS0 or /dev/ttyAMA0; "sim" = simulator
+serial_baud = 38400
+serial_chunked = true       # 8-byte writes for the Pi mini-UART
+listen = "0.0.0.0:80"
+data_dir = "/var/lib/linkmeter"
+
+[firmware]
+enabled = true
+avrdude = "avrdude"
+spi_device = "/dev/spidev0.0"
+gpio_chip = "auto"
+reset_line = 25
+bundled_hex = "/usr/share/linkmeter/hm.hex"
+auto_recover = true
+
+[wifi]
+enabled = true
+interface = "wlan0"
+fallback_ap = true
+ap_ssid = "heatermeter"
+ap_password = ""

@@ -1,0 +1,17 @@
+# pi-gen configuration for a ready-to-flash HeaterMeter image.
+# Usage (on Linux, from a pi-gen checkout, branch "arm64" for 64-bit):
+#   cp -r <repo>/heatermeter-neo/packaging/pi-gen/stage-heatermeter .
+#   cp <repo>/heatermeter-neo/target/deb/linkmeterd_*_arm64.deb stage-heatermeter/00-install/files/linkmeterd.deb
+#   cp <repo>/heatermeter-neo/packaging/pi-gen/config config
+#   ./build-docker.sh
+IMG_NAME=heatermeter
+RELEASE=bookworm
+TARGET_HOSTNAME=heatermeter
+LOCALE_DEFAULT=en_US.UTF-8
+TIMEZONE_DEFAULT=Europe/Helsinki
+ENABLE_SSH=1
+# Set a real password, or remove these two lines to be asked on first boot
+FIRST_USER_NAME=pi
+FIRST_USER_PASS=heatermeter
+DISABLE_FIRST_BOOT_USER_RENAME=1
+STAGE_LIST="stage0 stage1 stage2 stage-heatermeter"

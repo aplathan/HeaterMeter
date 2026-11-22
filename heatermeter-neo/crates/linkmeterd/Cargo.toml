@@ -1,0 +1,58 @@
+[package]
+name = "linkmeterd"
+description = "HeaterMeter LinkMeter daemon: serial bridge, web UI, history, alarms"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+hm-protocol.workspace = true
+lm-core.workspace = true
+hm-sim.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "time", "sync", "process", "fs", "signal"] }
+tokio-serial = "5.4"
+tokio-stream = { version = "0.1", features = ["sync"] }
+futures-util = "0.3"
+axum = { version = "0.8", features = ["multipart"] }
+rusqlite = { version = "0.37", features = ["bundled"] }
+rust-embed = { version = "8", features = ["interpolate-folder-path"] }
+mime_guess = "2"
+toml = "0.9"
+lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls", "hostname"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "json", "form"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+argon2 = { version = "0.5", features = ["std"] }
+base64 = "0.22"
+if-addrs = "0.13"
+url = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+# `cargo deb -p linkmeterd` (after building web/ and the release binary)
+[package.metadata.deb]
+name = "linkmeterd"
+maintainer = "HeaterMeter contributors"
+copyright = "HeaterMeter contributors, MIT license"
+extended-description = """\
+LinkMeter for HeaterMeter BBQ controllers: bridges the HeaterMeter board over \
+the serial port, serves the web UI and the LinkMeter-compatible HTTP API, \
+records cook history and sends alarm notifications."""
+section = "misc"
+priority = "optional"
+depends = "$auto"
+recommends = "avrdude, gpiod, network-manager, avahi-daemon"
+conf-files = ["/etc/linkmeter/config.toml"]
+maintainer-scripts = "../../packaging/debian"
+assets = [
+  ["target/release/linkmeterd", "usr/bin/", "755"],
+  ["../../packaging/config.toml", "etc/linkmeter/config.toml", "600"],
+  ["../../packaging/scripts-README", "etc/linkmeter/scripts/README", "644"],
+  ["../../packaging/avahi/heatermeter.service", "etc/avahi/services/heatermeter.service", "644"],
+  ["../../packaging/firmware/hm.hex", "usr/share/linkmeter/hm.hex", "644"],
+]
+systemd-units = { unit-name = "linkmeterd", unit-scripts = "../../packaging/systemd", enable = true, start = true }

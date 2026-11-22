@@ -1,0 +1,25 @@
+[Unit]
+Description=HeaterMeter LinkMeter daemon
+Documentation=https://github.com/CapnBry/HeaterMeter
+After=network.target NetworkManager.service
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/linkmeterd --config /etc/linkmeter/config.toml
+Restart=always
+RestartSec=3
+Environment=RUST_LOG=info
+# Runs as root: it binds port 80, owns the serial port, drives SPI/GPIO for
+# AVR flashing and manages wifi through NetworkManager.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+StateDirectory=linkmeter
+ConfigurationDirectory=linkmeter
+
+[Install]
+WantedBy=multi-user.target

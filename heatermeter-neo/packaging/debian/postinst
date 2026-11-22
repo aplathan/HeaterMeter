@@ -1,0 +1,21 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+  mkdir -p /var/lib/linkmeter /etc/linkmeter/scripts
+
+  # Raspberry Pi: enable the UART (without a login console) and SPI.
+  if command -v raspi-config >/dev/null 2>&1; then
+    raspi-config nonint do_serial_hw 0 || true
+    raspi-config nonint do_serial_cons 1 || true
+    raspi-config nonint do_spi 0 || true
+    echo "linkmeterd: UART and SPI enabled; reboot once for them to take effect."
+  fi
+
+  # Make sure Avahi picks up the service file
+  if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet avahi-daemon; then
+    systemctl reload avahi-daemon || true
+  fi
+fi
+
+#DEBHELPER#

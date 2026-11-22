@@ -1,0 +1,63 @@
+name: heatermeter-neo
+
+on:
+  push:
+    paths: ['heatermeter-neo/**', '.github/workflows/heatermeter-neo.yml']
+  pull_request:
+    paths: ['heatermeter-neo/**', '.github/workflows/heatermeter-neo.yml']
+
+defaults:
+  run:
+    working-directory: heatermeter-neo
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: heatermeter-neo/web/package-lock.json
+      - name: Web UI
+        working-directory: heatermeter-neo/web
+        run: |
+          npm ci
+          npm run check
+          npm run build
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: heatermeter-neo
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  package:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [aarch64-unknown-linux-gnu, armv7-unknown-linux-gnueabihf, arm-unknown-linux-gnueabihf]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: heatermeter-neo
+          key: ${{ matrix.target }}
+      - uses: mlugg/setup-zig@v2
+      - run: cargo install --locked cargo-zigbuild cargo-deb
+      - run: packaging/build.sh ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linkmeterd-${{ matrix.target }}
+          path: heatermeter-neo/target/deb/*.deb

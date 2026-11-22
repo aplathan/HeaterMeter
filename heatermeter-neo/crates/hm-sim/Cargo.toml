@@ -1,0 +1,16 @@
+[package]
+name = "hm-sim"
+description = "HeaterMeter firmware simulator (serial protocol + simple pit thermal model)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+hm-protocol.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[[bin]]
+name = "hm-sim"
+path = "src/main.rs"

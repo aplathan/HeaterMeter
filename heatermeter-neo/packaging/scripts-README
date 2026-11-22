@@ -1,0 +1,13 @@
+Alarm scripts
+=============
+
+Executable files in this directory are run when an alarm starts ringing:
+
+  alarm-all          every alarm
+  alarm-<P><T>       probe P (0-3), type T (L = low, H = high), e.g. alarm-1H
+
+They are run with /bin/sh and receive the same environment variables as the
+OpenWrt LinkMeter scripts: al_probe, al_type, al_thresh, al_prep, pn, pcurr,
+pn0..pn3, pcurr0..pcurr3, ip and the whole HeaterMeter configuration
+(pidp, pidi, ...). A non-zero exit status stops further alarm processing
+(email, SMS, push).
