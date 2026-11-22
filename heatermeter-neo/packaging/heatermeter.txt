@@ -1,0 +1,52 @@
+# ============================================================================
+#  HeaterMeter – perusasetukset / basic settings
+# ============================================================================
+#
+#  FI: Täytä haluamasi kohdat, tallenna tiedosto ja laita muistikortti takaisin
+#      laitteeseen. Asetukset otetaan käyttöön käynnistyksessä. Salasanat
+#      poistetaan tästä tiedostosta automaattisesti käyttöönoton jälkeen.
+#      Tyhjäksi jätetty kohta ei muuta mitään.
+#
+#  EN: Fill in what you need, save the file and put the SD card back into the
+#      device. Settings are applied at boot. Passwords are removed from this
+#      file automatically once applied. Empty values change nothing.
+#
+#  Muoto / format:   avain = arvo   (key = value)
+#  Rivit, jotka alkavat #-merkillä, ovat kommentteja. / Lines starting with # are comments.
+#
+#  Jos laite ei pääse verkkoon, se avaa oman wifi-tukiaseman (oletusnimi
+#  "heatermeter"). Yhdistä siihen puhelimella, niin asetussivu aukeaa,
+#  tai mene osoitteeseen http://192.168.201.1/
+#  If the device cannot reach a network it starts its own wifi access point
+#  ("heatermeter"). Join it with a phone and the settings page opens, or go
+#  to http://192.168.201.1/
+# ----------------------------------------------------------------------------
+
+# --- Oma wifi-verkko / your wifi network -------------------------------------
+wifi_ssid =
+wifi_password =
+
+# Maakoodi, pakollinen wifin käyttöön (FI, SE, DE, US...)
+# Country code, required for wifi
+wifi_country = FI
+
+# --- Ylläpito / administration -----------------------------------------------
+# Web-käyttöliittymän ylläpitosalasana (vähintään 6 merkkiä)
+# Web UI admin password (at least 6 characters)
+admin_password =
+
+# Laitteen nimi verkossa: http://<nimi>.local/
+# Device name on the network
+hostname = heatermeter
+
+# Aikavyöhyke / time zone
+timezone = Europe/Helsinki
+
+# Lämpötilayksikkö C tai F / temperature units C or F
+units = C
+
+# --- Varatukiasema / fallback access point -----------------------------------
+# Tukiaseman nimi ja salasana (8–63 merkkiä, tyhjä = avoin verkko)
+# Access point name and password (8-63 characters, empty = open network)
+ap_ssid = heatermeter
+ap_password =

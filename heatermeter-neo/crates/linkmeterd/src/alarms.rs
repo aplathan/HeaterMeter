@@ -46,9 +46,52 @@ pub async fn run(app: AppRef, mut rx: mpsc::UnboundedReceiver<SysEvent>) {
                     tracing::error!("cannot save config: {e}");
                 }
             }
-            SysEvent::ConfigComplete => tracing::info!("HeaterMeter configuration received"),
+            SysEvent::ConfigComplete => {
+                tracing::info!("HeaterMeter configuration received");
+                if let Some(u) = app.take_pending_units() {
+                    tokio::spawn(apply_units(app.clone(), u));
+                }
+            }
+            SysEvent::WifiAp(start) => {
+                let app = app.clone();
+                tokio::spawn(async move {
+                    let r =
+                        if start { crate::wifi::start_ap(&app, true).await } else { crate::wifi::stop_ap(&app).await };
+                    if let Err(e) = r {
+                        tracing::error!("wifi access point: {e}");
+                        app.device.toast("Wifi AP failed", &e.chars().take(16).collect::<String>());
+                    }
+                });
+            }
         }
     }
+}
+
+/// Switch HeaterMeter's temperature units (from the boot config file),
+/// converting the current setpoint like the web UI does.
+async fn apply_units(app: AppRef, u: char) {
+    // wait for the first status update to know the setpoint
+    for _ in 0..20 {
+        if app.device.read(|c| c.status.has_update()) {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+    let (cur, sp) = app
+        .device
+        .read(|c| (c.config().and_then(|m| m.get("u").map(|v| v.as_str())), c.status.set.parse::<f64>().ok()));
+    if cur.as_deref() == Some(&u.to_string()) {
+        return;
+    }
+    let value = match sp {
+        Some(sp) if sp > 0.0 => {
+            let conv = if u == 'C' { (sp - 32.0) * 5.0 / 9.0 } else { sp * 9.0 / 5.0 + 32.0 };
+            format!("{}{u}", conv.round() as i64)
+        }
+        _ => u.to_string(),
+    };
+    tracing::info!("setting temperature units to {u} (sp={value})");
+    let _ = app.device.set("sp", &value);
 }
 
 fn is_executable(p: &Path) -> bool {

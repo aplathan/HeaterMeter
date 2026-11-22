@@ -2,6 +2,7 @@
 
 mod alarms;
 mod app;
+mod bootconfig;
 mod config;
 mod device;
 mod discovery;
@@ -178,7 +179,8 @@ async fn run(cfg: Config, config_path: PathBuf) {
         }
     };
     tracing::info!("linkmeterd {} listening on http://{listen}", env!("CARGO_PKG_VERSION"));
-    let server = axum::serve(listener, http::router(app.clone()));
+    let server =
+        axum::serve(listener, http::router(app.clone()).into_make_service_with_connect_info::<std::net::SocketAddr>());
     tokio::select! {
         r = server => {
             if let Err(e) = r {
@@ -208,13 +210,21 @@ async fn setup(mut cfg: Config, config_path: PathBuf) -> Result<AppRef, String> 
     let (device, tasks) = Device::new(settings_of(&cfg), cfg.ramp.clone(), storage.clone(), sys_tx);
     let app: AppRef = Arc::new(App::new(cfg.clone(), config_path, device.clone(), storage.clone(), uuid));
 
+    {
+        let app = app.clone();
+        tokio::spawn(async move {
+            for line in bootconfig::apply(&app).await {
+                tracing::info!(target: "bootconfig", "{line}");
+            }
+        });
+    }
     tokio::spawn(alarms::run(app.clone(), sys_rx));
     tokio::spawn(discovery::ipwatch_task(app.clone()));
     if cfg.daemon.ssdp {
         tokio::spawn(discovery::ssdp_task(app.clone()));
     }
     if cfg.wifi.enabled {
-        tokio::spawn(wifi::fallback_task(app.clone()));
+        tokio::spawn(wifi::manager_task(app.clone()));
     }
     {
         let storage = storage.clone();
@@ -338,6 +348,62 @@ mod integration {
         let v: serde_json::Value = serde_json::from_str(json).unwrap();
         assert!(v["temps"].as_array().unwrap().len() == 4);
         assert!(v["fan"]["c"].is_number());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn captive_portal_redirects_ap_clients() {
+        use tower::ServiceExt;
+        let (app, _addr, _dir) = start().await;
+        let req = |ip: &str, host: &str| {
+            let mut r = axum::http::Request::builder()
+                .uri("/generate_204")
+                .header("host", host)
+                .body(axum::body::Body::empty())
+                .unwrap();
+            r.extensions_mut()
+                .insert(axum::extract::ConnectInfo::<std::net::SocketAddr>(format!("{ip}:5000").parse().unwrap()));
+            r
+        };
+        // AP not running: nothing special
+        let r =
+            http::router(app.clone()).oneshot(req("192.168.201.10", "connectivitycheck.gstatic.com")).await.unwrap();
+        assert_eq!(r.status(), 200);
+        app.wifi.set_ap_active(true);
+        // phone on the AP asking for another host is sent to the device
+        let r =
+            http::router(app.clone()).oneshot(req("192.168.201.10", "connectivitycheck.gstatic.com")).await.unwrap();
+        assert_eq!(r.status(), 307);
+        assert_eq!(r.headers()["location"], "http://192.168.201.1/");
+        // requests to the device itself are served
+        let r = http::router(app.clone()).oneshot(req("192.168.201.10", "192.168.201.1")).await.unwrap();
+        assert_eq!(r.status(), 200);
+        // LAN clients are never redirected
+        let r = http::router(app.clone()).oneshot(req("192.168.1.10", "grill.example")).await.unwrap();
+        assert_eq!(r.status(), 200);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn boot_config_admin_password_and_ap() {
+        let (app, _addr, dir) = start().await;
+        let file = dir.path().join("heatermeter.txt");
+        std::fs::write(
+            &file,
+            "# test\nadmin_password = grillimestari\nap_ssid = Savustin\nap_password = short\nunits = C\n",
+        )
+        .unwrap();
+        let log = bootconfig::apply_file(&app, &file).await;
+        assert!(log.iter().any(|l| l.contains("admin password set")), "{log:?}");
+        assert!(log.iter().any(|l| l.contains("ap_password: must be 8-63")), "{log:?}");
+        let cfg = app.config();
+        assert!(http::verify_password("grillimestari", &cfg.auth.password_hash));
+        assert_eq!(cfg.wifi.ap_ssid, "Savustin");
+        assert_eq!(app.take_pending_units(), Some('C'));
+        let text = std::fs::read_to_string(&file).unwrap();
+        assert!(!text.contains("grillimestari"), "{text}");
+        assert!(text.contains("# admin_password: asetettu"));
+        // applying again re-applies nothing; the invalid AP password is still reported
+        let log = bootconfig::apply_file(&app, &file).await;
+        assert_eq!(log, vec!["ap_password: must be 8-63 characters, ignored".to_string()]);
     }
 
     #[tokio::test(flavor = "multi_thread")]

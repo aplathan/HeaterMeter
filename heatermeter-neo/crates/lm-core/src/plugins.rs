@@ -267,10 +267,17 @@ impl UnkProbe {
 // ---------------------------------------------------------------- netinfo
 
 /// LCD "Network Information" host-interactive menu (topic 0).
+///
+/// HeaterMeter forwards button presses on its NETINFO menu page to the host
+/// (`$HMHI`), so the board's own buttons can drive these pages:
+/// title, IP address, wifi status and a wifi access point toggle (DOWN on the
+/// last page starts/stops the AP).
 #[derive(Debug, Default, Clone)]
 pub struct NetInfo {
     pub ip: Option<String>,
-    pub registration: Option<String>,
+    /// Short wifi status line, e.g. the SSID or `AP heatermeter`
+    pub wifi: Option<String>,
+    pub ap_active: bool,
 }
 
 pub const TOPIC_NETINFO: u8 = 0;
@@ -281,9 +288,14 @@ impl NetInfo {
             return;
         }
         const TITLE: u8 = 0;
-        const LAST: u8 = 2;
-        let mut opaque = opaque;
-        if btn == button::DOWN && opaque < LAST {
+        const LAST: u8 = 3;
+        let mut opaque = opaque.min(LAST);
+        let mut toggled = false;
+        if btn == button::DOWN && opaque == LAST {
+            // Already on the AP page: DOWN toggles the access point
+            toggled = true;
+            ctx.effects.push(Effect::WifiAp { start: !self.ap_active });
+        } else if btn == button::DOWN && opaque < LAST {
             opaque += 1;
         } else if btn == button::UP && opaque > TITLE {
             opaque -= 1;
@@ -291,8 +303,13 @@ impl NetInfo {
         let (l1, l2) = match opaque {
             0 => ("\u{2}   Network   \u{2}".to_string(), "  Information  ".to_string()),
             1 => ("Network Address".to_string(), self.ip.clone().unwrap_or_else(|| "Unknown".into())),
-            _ => ("Device register".to_string(), self.registration.clone().unwrap_or_else(|| "Not attempted".into())),
+            2 => ("Wifi".to_string(), self.wifi.clone().unwrap_or_else(|| "Not connected".into())),
+            _ if toggled && !self.ap_active => ("Starting AP...".to_string(), "192.168.201.1".to_string()),
+            _ if toggled => ("Stopping AP...".to_string(), "Joining wifi".to_string()),
+            _ if self.ap_active => ("Stop Wifi AP".to_string(), "Press DOWN".to_string()),
+            _ => ("Start Wifi AP".to_string(), "Press DOWN".to_string()),
         };
-        ctx.write(Command::set("hi", format!("{opaque},{l1},{l2}")));
+        let clip = |s: String| s.replace(',', " ").chars().take(16).collect::<String>();
+        ctx.write(Command::set("hi", format!("{opaque},{},{}", clip(l1), clip(l2))));
     }
 }

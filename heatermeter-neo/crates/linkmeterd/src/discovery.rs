@@ -126,8 +126,11 @@ pub async fn ipwatch_task(app: AppRef) {
     loop {
         tick.tick().await;
         let ip = primary_ip();
+        let wifi = if app.config().wifi.enabled { crate::wifi::lcd_line(&app).await } else { None };
+        let ap = app.wifi.ap_active();
         app.device.with_core(|c| {
-            c.netinfo.registration = Some("Disabled".into());
+            c.netinfo.wifi = wifi;
+            c.netinfo.ap_active = ap;
             ((), c.set_ip(ip))
         });
     }

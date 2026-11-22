@@ -12,6 +12,14 @@ if [ "$1" = "configure" ]; then
     echo "linkmeterd: UART and SPI enabled; reboot once for them to take effect."
   fi
 
+  # Put the editable settings file on the FAT boot partition (once)
+  for BOOT in /boot/firmware /boot; do
+    if [ -d "$BOOT" ] && [ -e "$BOOT/config.txt" ]; then
+      [ -e "$BOOT/heatermeter.txt" ] || cp /usr/share/linkmeter/heatermeter.txt "$BOOT/heatermeter.txt"
+      break
+    fi
+  done
+
   # Make sure Avahi picks up the service file
   if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet avahi-daemon; then
     systemctl reload avahi-daemon || true

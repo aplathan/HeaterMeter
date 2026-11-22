@@ -177,6 +177,15 @@ const fi = {
   changed_fields: 'muutettua kenttää',
   no_changes: 'Ei muutoksia',
   pidint: 'PID-sisäiset',
+  ap_mode_title: 'Laite on tukiasematilassa',
+  ap_mode_help:
+    'Olet yhteydessä laitteen omaan wifi-tukiasemaan. Kun liität laitteen kotiverkkoon, tämä yhteys katkeaa: yhdistä puhelin kotiverkkoon ja avaa',
+  stop_ap: 'Pysäytä tukiasema',
+  confirm_join:
+    'Laite irrottaa tukiaseman ja liittyy verkkoon. Jos liittyminen epäonnistuu, tukiasema käynnistyy uudelleen noin minuutin kuluttua. Jatketaanko?',
+  joined_help: 'Laite on nyt verkossa. Yhdistä puhelin samaan verkkoon ja avaa',
+  boot_file_help:
+    'Wifin ja salasanat voi asettaa myös muistikortin boot-osion heatermeter.txt-tiedostossa.',
 }
 
 type Dict = typeof fi
@@ -357,6 +366,14 @@ const en: Dict = {
   changed_fields: 'changed fields',
   no_changes: 'No changes',
   pidint: 'PID internals',
+  ap_mode_title: 'The device is in access point mode',
+  ap_mode_help:
+    "You are connected to the device's own wifi access point. When you join the device to your home network this connection drops: switch your phone to that network and open",
+  stop_ap: 'Stop access point',
+  confirm_join:
+    'The device will stop the access point and join the network. If joining fails the access point comes back in about a minute. Continue?',
+  joined_help: 'The device is on the network now. Connect your phone to the same network and open',
+  boot_file_help: 'Wifi and passwords can also be set in heatermeter.txt on the SD card boot partition.',
 }
 
 export type Key = keyof Dict

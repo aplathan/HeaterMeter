@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { get, post, type WifiNetwork } from '../../lib/api'
+  import { get, post, send, type WifiNetwork } from '../../lib/api'
   import { live } from '../../lib/live.svelte'
   import { t } from '../../lib/i18n.svelte'
   import { action, daemon, saveSettings } from '../../lib/settings.svelte'
@@ -10,6 +10,7 @@
     state?: string
     connection?: string
     hotspot?: boolean
+    ap_ssid?: string
     ip?: string | null
   }
 
@@ -17,6 +18,7 @@
   let networks = $state<WifiNetwork[]>([])
   let ssid = $state('')
   let password = $state('')
+  let switchedUrl = $state('')
   const scanAct = action()
   const connAct = action()
   const saveAct = action()
@@ -37,17 +39,22 @@
   }
 
   async function connect() {
+    if (status?.hotspot && !confirm(t('confirm_join'))) return
     await connAct.run(async () => {
-      const r = await post<{ message: string }>('/wifi/connect', { ssid, password })
+      const r = await post<{ message?: string; switching?: boolean; url?: string }>('/wifi/connect', { ssid, password })
       password = ''
+      if (r.switching) {
+        switchedUrl = r.url ?? ''
+        return `${ssid} …`
+      }
       await refresh()
       return r.message
     })
   }
 
-  async function hotspot() {
+  async function hotspot(start: boolean) {
     await connAct.run(async () => {
-      const r = await post<{ message: string }>('/wifi/hotspot')
+      const r = await send<{ message: string }>(start ? 'POST' : 'DELETE', '/wifi/hotspot')
       await refresh()
       return r.message
     })
@@ -73,6 +80,18 @@
     {/if}
   </dl>
 </section>
+
+{#if switchedUrl}
+  <div class="banner info stack-banner">
+    <strong>{t('joined_help')}</strong>
+    <a href={switchedUrl}>{switchedUrl}</a>
+  </div>
+{:else if status?.hotspot}
+  <div class="banner warn stack-banner">
+    <strong>{t('ap_mode_title')} ({status.ap_ssid})</strong>
+    <span>{t('ap_mode_help')} <code>http://{live.info?.hostname}.local/</code></span>
+  </div>
+{/if}
 
 {#if status && !status.available}
   <div class="card muted">{t('wifi_unavailable')}</div>
@@ -110,13 +129,18 @@
     <section class="card">
       <div class="card-head">
         <h2>{t('hotspot')}</h2>
-        <button class="small" onclick={hotspot} disabled={connAct.busy}>{t('hotspot')}</button>
+        {#if status.hotspot}
+          <button class="small" onclick={() => hotspot(false)} disabled={connAct.busy}>{t('stop_ap')}</button>
+        {:else}
+          <button class="small" onclick={() => hotspot(true)} disabled={connAct.busy}>{t('hotspot')}</button>
+        {/if}
       </div>
       <div class="fields wide">
         <label class="check"><input type="checkbox" bind:checked={w.fallback_ap} /> {t('fallback_ap')}</label>
         <label class="field">{t('ap_ssid')}<input bind:value={w.ap_ssid} /></label>
         <label class="field">{t('ap_password')}<input type="password" bind:value={w.ap_password} minlength="8" /></label>
       </div>
+      <p class="muted hint">{t('boot_file_help')}</p>
       <div class="row end">
         {#if saveAct.msg}<span class:err={!saveAct.ok}>{saveAct.msg}</span>{/if}
         <button class="primary" onclick={() => saveAct.run(async () => { await saveSettings(); return t('saved') })}>{t('save')}</button>
@@ -179,5 +203,14 @@
   }
   .err {
     color: var(--danger);
+  }
+  .stack-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .hint {
+    font-size: 0.82rem;
+    margin: 12px 0 0;
   }
 </style>

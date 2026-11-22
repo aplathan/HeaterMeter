@@ -32,6 +32,7 @@ url = "2"
 
 [dev-dependencies]
 tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
 
 # `cargo deb -p linkmeterd` (after building web/ and the release binary)
 [package.metadata.deb]
@@ -45,7 +46,7 @@ records cook history and sends alarm notifications."""
 section = "misc"
 priority = "optional"
 depends = "$auto"
-recommends = "avrdude, gpiod, network-manager, avahi-daemon"
+recommends = "avrdude, gpiod, network-manager, avahi-daemon, iw"
 conf-files = ["/etc/linkmeter/config.toml"]
 maintainer-scripts = "../../packaging/debian"
 assets = [
@@ -54,5 +55,7 @@ assets = [
   ["../../packaging/scripts-README", "etc/linkmeter/scripts/README", "644"],
   ["../../packaging/avahi/heatermeter.service", "etc/avahi/services/heatermeter.service", "644"],
   ["../../packaging/firmware/hm.hex", "usr/share/linkmeter/hm.hex", "644"],
+  ["../../packaging/heatermeter.txt", "usr/share/linkmeter/heatermeter.txt", "644"],
+  ["../../packaging/networkmanager/heatermeter-captive.conf", "etc/NetworkManager/dnsmasq-shared.d/heatermeter.conf", "644"],
 ]
 systemd-units = { unit-name = "linkmeterd", unit-scripts = "../../packaging/systemd", enable = true, start = true }

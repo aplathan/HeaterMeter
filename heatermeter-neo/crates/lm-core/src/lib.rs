@@ -108,6 +108,10 @@ pub enum Effect {
     RampCancelled,
     /// All configuration segments have been received.
     ConfigComplete,
+    /// Start (`true`) or stop the wifi access point (LCD menu request).
+    WifiAp {
+        start: bool,
+    },
     Log(LogLevel, String),
 }
 

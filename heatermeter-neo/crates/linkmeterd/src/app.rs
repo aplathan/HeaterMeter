@@ -18,6 +18,9 @@ pub struct App {
     /// Held while the AVR is being flashed
     pub flash_lock: tokio::sync::Mutex<()>,
     pub uuid: String,
+    pub wifi: crate::wifi::WifiState,
+    /// Temperature units requested by the boot config, applied once HeaterMeter is configured
+    pending_units: std::sync::Mutex<Option<char>>,
 }
 
 pub type AppRef = Arc<App>;
@@ -40,7 +43,17 @@ impl App {
             started: Instant::now(),
             flash_lock: tokio::sync::Mutex::new(()),
             uuid,
+            wifi: Default::default(),
+            pending_units: Default::default(),
         }
+    }
+
+    pub fn set_pending_units(&self, u: Option<char>) {
+        *self.pending_units.lock().unwrap_or_else(|e| e.into_inner()) = u;
+    }
+
+    pub fn take_pending_units(&self) -> Option<char> {
+        self.pending_units.lock().unwrap_or_else(|e| e.into_inner()).take()
     }
 
     pub fn config(&self) -> Config {

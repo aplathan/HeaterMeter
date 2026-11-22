@@ -26,6 +26,8 @@ pub enum SysEvent {
     RampStarted(f64),
     RampCancelled,
     ConfigComplete,
+    /// Start (`true`) or stop the wifi access point (LCD network menu)
+    WifiAp(bool),
 }
 
 enum Control {
@@ -124,6 +126,9 @@ impl Device {
                 }
                 Effect::RampCancelled => {
                     let _ = self.sys_tx.send(SysEvent::RampCancelled);
+                }
+                Effect::WifiAp { start } => {
+                    let _ = self.sys_tx.send(SysEvent::WifiAp(start));
                 }
                 Effect::ConfigComplete => {
                     let json = self.read(|c| c.config_json());

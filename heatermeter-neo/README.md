@@ -41,17 +41,48 @@ For UI development, run the daemon as above on port 8099 and `npm run dev` in
 
 ## Installing on a Raspberry Pi
 
-1. Flash Raspberry Pi OS Lite (Bookworm or later). Set up wifi/SSH in Raspberry Pi Imager.
+1. Flash Raspberry Pi OS Lite (Bookworm or later), or the ready-made image
+   built with `packaging/pi-gen/`.
 2. Install the package (from CI artifacts, or build it with `packaging/build.sh`):
    ```sh
-   sudo apt install ./linkmeterd_*_arm64.deb avrdude gpiod
+   sudo apt install ./linkmeterd_*_arm64.deb avrdude gpiod iw
    sudo reboot   # the postinst enables the UART and SPI
    ```
-3. Open `http://heatermeter.local/` (or the Pi's IP) and set an admin password
-   under **Settings → System**.
 
-A ready-to-flash image can be built with [pi-gen](https://github.com/RPi-Distro/pi-gen)
-using `packaging/pi-gen/` (see the comments in `packaging/pi-gen/config`).
+### First-time setup (headless)
+
+HeaterMeter has only an LCD and a 4-way button, so setup happens over wifi.
+There are two ways to do it.
+
+**Option 1: settings file on the SD card.** The package places
+`heatermeter.txt` on the FAT boot partition, which can be edited on any
+computer. Settings in it are applied at the next boot:
+
+| Key | What |
+|---|---|
+| `wifi_ssid`, `wifi_password` | Your wifi network |
+| `wifi_country` | Country code; required before wifi works |
+| `admin_password` | Web UI admin password |
+| `hostname` | Device name; the UI is then at `http://<hostname>.local/` |
+| `timezone` | Time zone |
+| `units` | `C` or `F` |
+| `ap_ssid`, `ap_password` | Fallback access point name and password |
+
+Passwords are removed from the file once applied. Other values are only
+applied again when they change. Lines starting with `#` are comments.
+
+**Option 2: the built-in access point.**
+* **When it starts:** if no network is reachable about a minute after boot,
+  the device starts its own access point (`heatermeter`, open by default)
+  and shows `AP heatermeter / 192.168.201.1` on the LCD.
+* **Configuring:** joining the access point with a phone opens the settings
+  page automatically (captive portal). Pick your network under
+  **Settings → Network**. If joining fails, the access point comes back.
+* **While it runs:** it retries the saved networks every 5–30 minutes, but
+  only when nobody is using it.
+* **From the board itself:** the LCD menu can start or stop the access
+  point. Press RIGHT until the *Network* page, press DOWN to the
+  *Start Wifi AP* page, then press DOWN again.
 
 Configuration lives in `/etc/linkmeter/config.toml`. Most of it is edited
 from the web UI. History is stored in `/var/lib/linkmeter/history.db`.
@@ -121,5 +152,7 @@ Not yet verified on a real Raspberry Pi with a HeaterMeter board:
 
 * the serial port on `/dev/serial0`
 * avrdude `linuxspi` flashing
-* NetworkManager wifi control
-* the armv7/armv6 builds (CI builds them with cargo-zigbuild)
+* NetworkManager wifi control: access point, captive portal, joining a network
+* the `heatermeter.txt` boot settings on a real SD card (parsing and
+  redaction are unit tested)
+* running the armv7/armv6 builds (CI builds them)

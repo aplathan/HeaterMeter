@@ -35,7 +35,7 @@ pub fn routes() -> Router<AppRef> {
         .route("/wifi/status", get(wifi_status))
         .route("/wifi/scan", get(wifi_scan))
         .route("/wifi/connect", post(wifi_connect))
-        .route("/wifi/hotspot", post(wifi_hotspot))
+        .route("/wifi/hotspot", post(wifi_hotspot).delete(wifi_hotspot_stop))
         .route("/auth/login", post(login))
         .route("/auth/logout", post(logout_h))
         .route("/auth/password", post(password))
@@ -516,7 +516,7 @@ async fn wifi_status(State(app): State<AppRef>, h: HeaderMap) -> R {
     if !cfg.enabled {
         return Json(json!({ "available": false, "disabled": true })).into_response();
     }
-    Json(wifi::status(&cfg).await).into_response()
+    Json(wifi::status(&app).await).into_response()
 }
 
 async fn wifi_scan(State(app): State<AppRef>, h: HeaderMap) -> R {
@@ -525,7 +525,7 @@ async fn wifi_scan(State(app): State<AppRef>, h: HeaderMap) -> R {
     if !cfg.enabled {
         return err(StatusCode::SERVICE_UNAVAILABLE, "wifi management disabled");
     }
-    match wifi::scan(&cfg).await {
+    match wifi::scan(&app).await {
         Ok(n) => Json(n).into_response(),
         Err(e) => err(StatusCode::BAD_GATEWAY, e),
     }
@@ -544,7 +544,24 @@ async fn wifi_connect(State(app): State<AppRef>, h: HeaderMap, Json(r): Json<Con
     if !cfg.enabled {
         return err(StatusCode::SERVICE_UNAVAILABLE, "wifi management disabled");
     }
-    match wifi::connect(&cfg, &r.ssid, &r.password).await {
+    if let Err(e) = wifi::validate(&r.ssid, &r.password) {
+        return err(StatusCode::BAD_REQUEST, e);
+    }
+    if app.wifi.ap_active() {
+        // The client is (most likely) on our access point, which goes away when
+        // we switch: answer first, then switch in the background.
+        let app2 = app.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(2)).await;
+            match wifi::connect(&app2, &r.ssid, &r.password).await {
+                Ok(m) => tracing::info!("{m}"),
+                Err(e) => tracing::warn!("{e}"),
+            }
+        });
+        let host = crate::app::hostname();
+        return Json(json!({ "ok": true, "switching": true, "url": format!("http://{host}.local/") })).into_response();
+    }
+    match wifi::connect(&app, &r.ssid, &r.password).await {
         Ok(m) => Json(json!({ "ok": true, "message": m })).into_response(),
         Err(e) => err(StatusCode::BAD_GATEWAY, e),
     }
@@ -556,7 +573,15 @@ async fn wifi_hotspot(State(app): State<AppRef>, h: HeaderMap) -> R {
     if !cfg.enabled {
         return err(StatusCode::SERVICE_UNAVAILABLE, "wifi management disabled");
     }
-    match wifi::start_hotspot(&cfg).await {
+    match wifi::start_ap(&app, true).await {
+        Ok(m) => Json(json!({ "ok": true, "message": m })).into_response(),
+        Err(e) => err(StatusCode::BAD_GATEWAY, e),
+    }
+}
+
+async fn wifi_hotspot_stop(State(app): State<AppRef>, h: HeaderMap) -> R {
+    require_admin!(app, h);
+    match wifi::stop_ap(&app).await {
         Ok(m) => Json(json!({ "ok": true, "message": m })).into_response(),
         Err(e) => err(StatusCode::BAD_GATEWAY, e),
     }

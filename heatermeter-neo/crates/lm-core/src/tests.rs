@@ -316,3 +316,24 @@ fn toast_sanitized() {
     let c = configured_core();
     assert_eq!(serial(&c.toast("Hello, world", "x")), vec!["/set?tt=Hello  world,x"]);
 }
+
+#[test]
+fn netinfo_wifi_ap_toggle() {
+    let mut c = configured_core();
+    c.netinfo.wifi = Some("Koti".into());
+    // DOWN from the IP page shows wifi status
+    let fx = feed(&mut c, "HMHI,1,0,8", 2000);
+    assert_eq!(serial(&fx), vec!["/set?hi=2,Wifi,Koti"]);
+    // DOWN from wifi page goes to the AP page, does not toggle yet
+    let fx = feed(&mut c, "HMHI,2,0,8", 2001);
+    assert_eq!(serial(&fx), vec!["/set?hi=3,Start Wifi AP,Press DOWN"]);
+    assert!(!fx.iter().any(|e| matches!(e, Effect::WifiAp { .. })));
+    // DOWN on the AP page starts the access point
+    let fx = feed(&mut c, "HMHI,3,0,8", 2002);
+    assert!(fx.iter().any(|e| matches!(e, Effect::WifiAp { start: true })));
+    assert_eq!(serial(&fx), vec!["/set?hi=3,Starting AP...,192.168.201.1"]);
+    // when the AP runs, DOWN stops it
+    c.netinfo.ap_active = true;
+    let fx = feed(&mut c, "HMHI,3,0,8", 2003);
+    assert!(fx.iter().any(|e| matches!(e, Effect::WifiAp { start: false })));
+}

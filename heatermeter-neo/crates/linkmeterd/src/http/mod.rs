@@ -29,7 +29,37 @@ pub fn router(app: AppRef) -> Router {
         .nest("/api/v2", api::routes())
         .route("/user.css", get(user_css))
         .fallback(get(static_files))
+        .layer(axum::middleware::from_fn_with_state(app.clone(), captive_portal))
         .with_state(app)
+}
+
+/// Clients on the access point network: keep the AP alive while they use it,
+/// and redirect requests for other hosts to the device (captive portal), so a
+/// phone joining the AP opens the HeaterMeter page automatically.
+async fn captive_portal(
+    State(app): State<AppRef>,
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response<Body> {
+    let client = req.extensions().get::<axum::extract::ConnectInfo<std::net::SocketAddr>>().map(|c| c.0.ip());
+    if client.is_some_and(crate::wifi::is_ap_client) {
+        app.wifi.touch_client();
+        if app.wifi.ap_active() {
+            let host = req.headers().get(header::HOST).and_then(|h| h.to_str().ok()).unwrap_or("");
+            let name = host.rsplit_once(':').map(|(h, _)| h).unwrap_or(host).to_ascii_lowercase();
+            let me = crate::app::hostname().to_ascii_lowercase();
+            let ours = name.is_empty()
+                || name.parse::<std::net::IpAddr>().is_ok()
+                || name == "localhost"
+                || name == me
+                || name == format!("{me}.local");
+            if !ours {
+                return axum::response::Redirect::temporary(&format!("http://{}/", crate::wifi::AP_ADDR))
+                    .into_response();
+            }
+        }
+    }
+    next.run(req).await
 }
 
 // ------------------------------------------------------------------ helpers
